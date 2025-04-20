@@ -1,3 +1,55 @@
+/* --- Theme Variables --- */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f4f4;
+    --bg-tertiary: #e9e9e9;
+    --bg-modal: #fefefe;
+    --text-primary: #333333;
+    --text-secondary: #555555;
+    --text-muted: #aaaaaa;
+    --border-primary: #eeeeee;
+    --border-secondary: #dddddd;
+    --border-hour-slot: #cccccc;
+    --accent-primary: #5c67f2;
+    --accent-primary-hover: #4a54cc;
+    --accent-delete: #e74c3c;
+    --accent-delete-hover: #c0392b;
+    --shadow-primary: rgba(0, 0, 0, 0.1);
+    --scheduled-task-bg: rgba(92, 103, 242, 0.8);
+    --scheduled-task-border: #4a54cc;
+    --scheduled-task-text: #ffffff;
+    --drop-target-bg: #e0f7fa;
+    --timeline-bg: #fdfdfd;
+}
+
+body[data-theme="dark"] {
+    --bg-primary: #2c2f33;         /* Darker background */
+    --bg-secondary: #23272a;       /* Even darker for elements */
+    --bg-tertiary: #3a3e44;        /* Lighter dark for items */
+    --bg-modal: #36393f;
+    --text-primary: #ffffff;       /* White text */
+    --text-secondary: #b9bbbe;     /* Lighter gray */
+    --text-muted: #72767d;
+    --border-primary: #4f545c;     /* Darker borders */
+    --border-secondary: #5e636a;
+    --border-hour-slot: #555960;
+    --accent-primary: #7289da;     /* Discord-like blue */
+    --accent-primary-hover: #677bc4;
+    --accent-delete: #ed4245;     /* Discord-like red */
+    --accent-delete-hover: #d83b3e;
+    --shadow-primary: rgba(0, 0, 0, 0.4);
+    --scheduled-task-bg: rgba(114, 137, 218, 0.8); /* Lighter blue for tasks */
+    --scheduled-task-border: #677bc4;
+    --scheduled-task-text: #ffffff;
+    --drop-target-bg: #40444b;     /* Darker drop target */
+    --timeline-bg: #313338;
+}
+
+/* Add more themes like this: */
+/* body[data-theme="fun"] { ... } */
+/* body[data-theme="aesthetic"] { ... } */
+
+
 /* Basic Reset & Body Styling */
 * {
     box-sizing: border-box;
@@ -6,65 +58,130 @@
 }
 
 body {
-    font-family: sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     line-height: 1.6;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
     display: flex;
-    justify-content: center;
-    align-items: flex-start; /* Align items to the top */
-    min-height: 100vh; /* Ensure body takes full viewport height */
-    padding-top: 20px; /* Add some padding at the top */
+    flex-direction: column; /* Stack header and container */
+    align-items: center;
+    min-height: 100vh;
+    padding-top: 0; /* Remove previous padding */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.app-header {
+    width: 100%;
+    background-color: var(--bg-primary);
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px var(--shadow-primary);
+    margin-bottom: 20px;
+    position: sticky; /* Make header sticky */
+    top: 0;
+    z-index: 110; /* Above timeline tasks */
+     border-bottom: 1px solid var(--border-primary);
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.5em;
+    color: var(--accent-primary);
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Spacing between controls */
+}
+
+.controls label {
+    margin-right: 5px;
+    color: var(--text-secondary);
+}
+
+.controls select,
+.controls button {
+    padding: 8px 12px;
+    background-color: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    gap: 5px;
+}
+
+.controls select {
+     background-color: var(--bg-tertiary);
+     color: var(--text-primary);
+     border: 1px solid var(--border-secondary);
+}
+
+
+.controls button:hover {
+    background-color: var(--accent-primary-hover);
+}
+
+.controls svg {
+     height: 1em; /* Control icon size */
 }
 
 h2, h3 {
     margin-bottom: 15px;
-    color: #555;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
-button {
-    padding: 8px 15px;
-    cursor: pointer;
-    background-color: #5c67f2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+button.delete-button {
+    background-color: var(--accent-delete);
+}
+button.delete-button:hover {
+    background-color: var(--accent-delete-hover);
 }
 
-button:hover {
-    background-color: #4a54cc;
-}
 
 input[type="text"],
 input[type="time"],
 input[type="number"],
-textarea {
+textarea,
+select {
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-secondary);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     border-radius: 4px;
     margin-bottom: 10px;
     width: 100%; /* Make inputs take full width within their container */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* App Layout */
 .app-container {
     display: flex;
     width: 95%;
-    max-width: 1400px;
-    background-color: #fff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 1500px; /* Slightly wider max width */
+    background-color: var(--bg-primary);
+    box-shadow: 0 2px 10px var(--shadow-primary);
     border-radius: 8px;
-    min-height: 80vh; /* Give container a decent height */
+    min-height: calc(100vh - 100px); /* Adjust height considering header */
+    overflow: hidden; /* Contain children */
+    transition: background-color 0.3s ease;
 }
 
 /* Task List Section */
 .task-list-container {
     width: 35%;
     padding: 20px;
-    border-right: 1px solid #eee;
+    border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
+    transition: border-color 0.3s ease;
 }
 
 .add-task {
@@ -83,26 +200,28 @@ textarea {
     padding: 0;
     flex-grow: 1; /* Allow list to take available space */
     overflow-y: auto; /* Add scroll if list gets long */
-    max-height: calc(80vh - 120px); /* Adjust max height based on container */
+    max-height: calc(100vh - 220px); /* Adjust max height based on container/header */
+    padding-right: 5px; /* Space for scrollbar */
 }
 
 .task-item {
-    background-color: #e9e9e9;
+    background-color: var(--bg-tertiary);
     padding: 10px 15px;
     margin-bottom: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-secondary);
     border-radius: 4px;
     cursor: grab;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.3s ease;
 }
 
 .task-item:hover {
-    background-color: #dcdcdc;
+    border-color: var(--accent-primary);
 }
 
 .task-item.dragging {
     opacity: 0.5;
-    background-color: #add8e6; /* Light blue */
+    background-color: var(--accent-primary);
+    color: white;
 }
 
 /* Schedule Section */
@@ -115,19 +234,22 @@ textarea {
 }
 
 #schedule-timeline {
-    position: relative; /* Parent for absolute positioning and hour lines */
+    position: relative;
     height: 1440px; /* 24 hours * 60 minutes = 1440 pixels (1px per minute) */
-    background-color: #fdfdfd;
-    border: 1px solid #eee;
-    overflow-y: auto; /* Scroll if content overflows */
-    flex-grow: 1; /* Allow timeline to take available space */
+    background-color: var(--timeline-bg);
+    border: 1px solid var(--border-primary);
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-left: 70px; /* Space for hour labels */
+     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .hour-slot {
     height: 60px; /* Corresponds to 60 minutes/pixels */
-    border-bottom: 1px dotted #ccc;
-    position: relative; /* For the time label */
-    box-sizing: border-box; /* Include border in height */
+    border-bottom: 1px dotted var(--border-hour-slot);
+    position: relative;
+    box-sizing: border-box;
+     transition: border-color 0.3s ease;
 }
 
 .hour-slot:last-child {
@@ -136,16 +258,19 @@ textarea {
 
 .hour-label {
     position: absolute;
-    top: -10px; /* Position slightly above the line */
-    left: -55px; /* Position to the left of the timeline */
+    top: -10px;
+    left: -70px; /* Position to the left, adjusted for padding */
     font-size: 0.8em;
-    color: #aaa;
-    width: 50px;
+    color: var(--text-muted);
+    width: 65px; /* Wider to fit time range */
     text-align: right;
+    user-select: none; /* Prevent text selection */
+     transition: color 0.3s ease;
 }
 
 .hour-slot.drop-target {
-     background-color: #e0f7fa; /* Visual feedback for drop zone */
+     background-color: var(--drop-target-bg);
+     transition: background-color 0.1s ease;
 }
 
 
@@ -154,71 +279,128 @@ textarea {
     position: absolute;
     left: 5px; /* Small offset from the left edge */
     right: 5px;
-    background-color: rgba(92, 103, 242, 0.8);
-    color: white;
-    border: 1px solid #4a54cc;
+    background-color: var(--scheduled-task-bg);
+    color: var(--scheduled-task-text);
+    border: 1px solid var(--scheduled-task-border);
+    border-left: 4px solid var(--accent-primary); /* Accent line */
     border-radius: 4px;
-    padding: 5px 8px;
-    font-size: 0.85em;
+    padding: 4px 8px;
+    font-size: 0.8em; /* Slightly smaller font */
     overflow: hidden;
     cursor: pointer;
-    z-index: 10; /* Ensure tasks are above hour lines */
-    box-sizing: border-box; /* Include padding/border in height calculation */
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    z-index: 10;
+    box-sizing: border-box;
+    display: flex; /* Use flexbox for content layout */
+    flex-direction: column; /* Stack text and time */
+    justify-content: space-between; /* Push time to bottom if space allows */
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .scheduled-task:hover {
-    background-color: rgba(74, 84, 204, 0.9);
-    border-color: #3b43a3;
+    filter: brightness(1.1); /* Slightly brighten on hover */
+    border-color: var(--accent-primary-hover);
 }
+
+.scheduled-task .task-text {
+    font-weight: 500;
+    margin-bottom: 2px; /* Space between text and time */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis if text overflows */
+}
+
+.scheduled-task .task-time {
+    font-size: 0.9em;
+    opacity: 0.8; /* Make time slightly less prominent */
+    white-space: nowrap;
+}
+
 
 /* Modal Styling */
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 100; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 1000; /* Ensure modal is on top */
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7); /* Darker overlay */
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 15% auto; /* 15% from the top and centered */
-    padding: 25px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 500px;
+    background-color: var(--bg-modal);
+    margin: 10% auto; /* Adjusted margin */
+    padding: 25px 30px;
+    border: 1px solid var(--border-secondary);
+    width: 90%;
+    max-width: 550px;
     border-radius: 8px;
     position: relative;
+    box-shadow: 0 5px 15px var(--shadow-primary);
+     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .close-button {
-    color: #aaa;
+    color: var(--text-muted);
     position: absolute;
     top: 10px;
     right: 15px;
     font-size: 28px;
     font-weight: bold;
+    transition: color 0.2s ease;
 }
 
 .close-button:hover,
 .close-button:focus {
-    color: black;
+    color: var(--text-primary);
     text-decoration: none;
     cursor: pointer;
 }
 
 #modal-save-button {
     margin-right: 10px;
+    background-color: var(--accent-primary);
+}
+#modal-save-button:hover {
+     background-color: var(--accent-primary-hover);
 }
 
 #modal-delete-button {
-    background-color: #e74c3c;
+     background-color: var(--accent-delete); /* Already styled */
 }
 #modal-delete-button:hover {
-    background-color: #c0392b;
+     background-color: var(--accent-delete-hover);
+}
+
+/* Responsive adjustments (optional) */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+        min-height: 0;
+    }
+    .task-list-container, .schedule-container {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-primary);
+    }
+     #task-list {
+         max-height: 30vh; /* Adjust height for smaller screens */
+     }
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 15px;
+    }
+    .app-header h1 {
+        margin-bottom: 10px;
+    }
+    .controls {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap; /* Allow controls to wrap */
+        gap: 10px;
+    }
 }

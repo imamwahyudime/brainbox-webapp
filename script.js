@@ -1,8 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const taskList = document.getElementById('task-list');
+    // DOM References
+    const taskListEl = document.getElementById('task-list');
     const newTaskInput = document.getElementById('new-task-input');
     const addTaskButton = document.getElementById('add-task-button');
-    const scheduleTimeline = document.getElementById('schedule-timeline');
+    const scheduleTimelineEl = document.getElementById('schedule-timeline');
+    const themeSelect = document.getElementById('theme-select');
+    const exportButton = document.getElementById('export-button');
+    const importButton = document.getElementById('import-button');
+    const importFileInput = document.getElementById('import-file-input');
 
     // Modal Elements
     const editModal = document.getElementById('edit-modal');
@@ -15,15 +20,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDeleteButton = document.getElementById('modal-delete-button');
     const modalScheduledTaskIdInput = document.getElementById('modal-scheduled-task-id');
 
-    // --- State Management (Simple In-Memory) ---
+    // --- State Management ---
     let tasks = []; // { id: string, text: string }
-    let scheduledTasks = []; // { id: string, taskId: string, text: string, startTime: number, duration: number, description: string } (startTime in minutes from midnight)
+    let scheduledTasks = []; // { id: string, taskId: string, text: string, startTime: number, duration: number, description: string }
     let nextTaskId = 1;
     let nextScheduledId = 1;
 
+    // --- Local Storage Keys ---
+    const TASKS_STORAGE_KEY = 'timeboxAppTasks';
+    const SCHEDULED_TASKS_STORAGE_KEY = 'timeboxAppScheduledTasks';
+    const THEME_STORAGE_KEY = 'timeboxAppTheme';
+    const NEXT_TASK_ID_KEY = 'timeboxAppNextTaskId';
+    const NEXT_SCHEDULED_ID_KEY = 'timeboxAppNextScheduledId';
+
+    // --- Helper Functions ---
+    function formatTime(totalMinutes) {
+        if (totalMinutes === 1440) totalMinutes = 0; // Handle midnight case start for end time
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = totalMinutes % 60;
+        //const hours12 = hours % 12 === 0 ? 12 : hours % 12;
+        //const ampm = hours < 12 || hours === 24 ? 'AM' : 'PM';
+        //return `${hours12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+    }
+
+    function formatMinutesToHHMM(totalMinutes) {
+        const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+        const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    function formatHHMMToMinutes(hhmm) {
+        if (!hhmm) return 0;
+        try {
+            const [hours, minutes] = hhmm.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return 0;
+            return (hours * 60) + minutes;
+        } catch (error) {
+            console.error("Error parsing time:", hhmm, error);
+            return 0;
+        }
+    }
+
+    // --- Local Storage Operations ---
+    function saveStateToLocalStorage() {
+        try {
+            localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
+            localStorage.setItem(SCHEDULED_TASKS_STORAGE_KEY, JSON.stringify(scheduledTasks));
+            localStorage.setItem(NEXT_TASK_ID_KEY, nextTaskId.toString());
+            localStorage.setItem(NEXT_SCHEDULED_ID_KEY, nextScheduledId.toString());
+            console.log("State saved to localStorage.");
+        } catch (error) {
+            console.error("Error saving state to localStorage:", error);
+            alert("Could not save data. Local storage might be full or disabled.");
+        }
+    }
+
+    function loadStateFromLocalStorage() {
+        try {
+            const savedTasks = localStorage.getItem(TASKS_STORAGE_KEY);
+            const savedScheduledTasks = localStorage.getItem(SCHEDULED_TASKS_STORAGE_KEY);
+            const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+            const savedNextTaskId = localStorage.getItem(NEXT_TASK_ID_KEY);
+            const savedNextScheduledId = localStorage.getItem(NEXT_SCHEDULED_ID_KEY);
+
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+            }
+            if (savedScheduledTasks) {
+                scheduledTasks = JSON.parse(savedScheduledTasks);
+            }
+            if (savedTheme) {
+                applyTheme(savedTheme);
+                themeSelect.value = savedTheme;
+            } else {
+                applyTheme('light'); // Default theme
+            }
+            if (savedNextTaskId) {
+                 // Ensure it's at least 1 and greater than max existing id
+                const maxTaskId = tasks.reduce((max, t) => Math.max(max, parseInt(t.id.substring(1)) || 0), 0);
+                nextTaskId = Math.max(parseInt(savedNextTaskId, 10) || 1, maxTaskId + 1);
+            }
+             if (savedNextScheduledId) {
+                const maxScheduledId = scheduledTasks.reduce((max, t) => Math.max(max, parseInt(t.id.substring(1)) || 0), 0);
+                 nextScheduledId = Math.max(parseInt(savedNextScheduledId, 10) || 1, maxScheduledId + 1);
+             }
+
+            console.log("State loaded from localStorage.");
+        } catch (error) {
+            console.error("Error loading state from localStorage:", error);
+            // Reset state if loading fails to prevent broken app state
+            tasks = [];
+            scheduledTasks = [];
+            nextTaskId = 1;
+            nextScheduledId = 1;
+            alert("Could not load saved data. It might be corrupted. Starting fresh.");
+            localStorage.removeItem(TASKS_STORAGE_KEY);
+            localStorage.removeItem(SCHEDULED_TASKS_STORAGE_KEY);
+            localStorage.removeItem(NEXT_TASK_ID_KEY);
+            localStorage.removeItem(NEXT_SCHEDULED_ID_KEY);
+        }
+    }
+
     // --- Task List Functionality ---
     function renderTaskList() {
-        taskList.innerHTML = ''; // Clear existing list
+        taskListEl.innerHTML = ''; // Clear existing list
         tasks.forEach(task => {
             const taskItem = document.createElement('li');
             taskItem.classList.add('task-item');
@@ -32,11 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
             taskItem.dataset.taskId = task.id;
             taskItem.textContent = task.text;
 
-            // Add drag start listener
             taskItem.addEventListener('dragstart', handleDragStart);
             taskItem.addEventListener('dragend', handleDragEnd);
 
-            taskList.appendChild(taskItem);
+            taskListEl.appendChild(taskItem);
         });
     }
 
@@ -47,87 +148,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTask = { id: `t${nextTaskId++}`, text: taskText };
         tasks.push(newTask);
         newTaskInput.value = '';
-        renderTaskList(); // Re-render the list to include the new task
+        renderTaskList();
+        saveStateToLocalStorage(); // Save after adding
     }
-
-    addTaskButton.addEventListener('click', addTask);
-    newTaskInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            addTask();
-        }
-    });
 
     // --- Drag and Drop Functionality ---
     function handleDragStart(e) {
         e.dataTransfer.setData('text/plain', e.target.id);
         e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => e.target.classList.add('dragging'), 0); // Add class after a tick
+        setTimeout(() => e.target.classList.add('dragging'), 0);
     }
 
     function handleDragEnd(e) {
         e.target.classList.remove('dragging');
     }
 
-    scheduleTimeline.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Necessary to allow dropping
+    scheduleTimelineEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        // Optional: Add visual feedback to the timeline or specific hour slot
         const targetSlot = getHourSlotFromY(e.clientY);
+        clearDropTargets(); // Clear previous targets
         if (targetSlot) {
-             // Remove from others first for cleaner effect
-             clearDropTargets();
-             targetSlot.classList.add('drop-target');
+            targetSlot.classList.add('drop-target');
         }
     });
 
-     scheduleTimeline.addEventListener('dragleave', (e) => {
-        // Optional: Remove visual feedback if the cursor leaves the timeline
-        if (!scheduleTimeline.contains(e.relatedTarget)) {
+     scheduleTimelineEl.addEventListener('dragleave', (e) => {
+        if (!scheduleTimelineEl.contains(e.relatedTarget)) {
              clearDropTargets();
         }
      });
 
      function clearDropTargets() {
-        scheduleTimeline.querySelectorAll('.hour-slot.drop-target').forEach(el => {
+        scheduleTimelineEl.querySelectorAll('.hour-slot.drop-target').forEach(el => {
             el.classList.remove('drop-target');
         });
      }
 
-    scheduleTimeline.addEventListener('drop', (e) => {
+    scheduleTimelineEl.addEventListener('drop', (e) => {
         e.preventDefault();
         clearDropTargets();
-        const taskId = e.dataTransfer.getData('text/plain');
-        const draggedElement = document.getElementById(taskId);
+        const taskIdAttr = e.dataTransfer.getData('text/plain'); // e.g., "task-t1"
+        const draggedElement = document.getElementById(taskIdAttr);
 
         if (!draggedElement) return;
 
-        const originalTaskId = draggedElement.dataset.taskId;
-        const taskText = tasks.find(t => t.id === originalTaskId)?.text || 'Unknown Task';
+        const originalTaskId = draggedElement.dataset.taskId; // e.g., "t1"
+        const taskData = tasks.find(t => t.id === originalTaskId);
+        if (!taskData) return; // Should not happen if state is consistent
 
-        // Calculate drop position and time
-        const timelineRect = scheduleTimeline.getBoundingClientRect();
-        const dropY = e.clientY - timelineRect.top + scheduleTimeline.scrollTop; // Y position within the timeline, considering scroll
+        const timelineRect = scheduleTimelineEl.getBoundingClientRect();
+        // Calculate Y relative to the timeline, considering scroll position
+        const dropY = e.clientY - timelineRect.top + scheduleTimelineEl.scrollTop;
 
-        // Convert Y position to minutes (1px = 1 minute)
+        // Convert Y position to minutes (1px = 1 minute, ensure within bounds)
         const rawMinutes = Math.max(0, Math.min(1439, Math.round(dropY)));
+        const startMinutes = Math.round(rawMinutes / 15) * 15; // Snap to 15 mins
 
-        // Optional: Snap to nearest 15 minutes
-        const startMinutes = Math.round(rawMinutes / 15) * 15;
-
-        // Create new scheduled task object
         const newScheduledTask = {
             id: `s${nextScheduledId++}`,
             taskId: originalTaskId,
-            text: taskText,
+            text: taskData.text,
             startTime: startMinutes,
             duration: 45, // Default duration
             description: ''
         };
 
         scheduledTasks.push(newScheduledTask);
-        renderSchedule(); // Update the visual schedule
+        renderSchedule();
+        saveStateToLocalStorage(); // Save after dropping
 
-        // Optional: Remove task from the list after scheduling
+        // Optional: Remove from list? Maybe just visually indicate it's scheduled?
         // tasks = tasks.filter(t => t.id !== originalTaskId);
         // renderTaskList();
     });
@@ -135,11 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Schedule Rendering ---
     function createHourSlots() {
-        const timelineHeight = scheduleTimeline.offsetHeight;
-        const hourHeight = 60; // Height corresponding to 60 minutes/pixels
+        const hourHeight = 60;
         const numHours = 24;
 
-        scheduleTimeline.innerHTML = ''; // Clear previous slots
+        scheduleTimelineEl.innerHTML = ''; // Clear everything first
 
         for (let i = 0; i < numHours; i++) {
             const slot = document.createElement('div');
@@ -149,28 +239,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const label = document.createElement('span');
             label.classList.add('hour-label');
-            // Format time (e.g., 9:00 AM)
-            const displayHour = i % 12 === 0 ? 12 : i % 12;
-            const ampm = i < 12 || i === 24 ? 'AM' : 'PM';
-            label.textContent = `${displayHour}:00 ${ampm}`;
+            // Display time range
+            const startTimeStr = formatTime(i * 60);
+            const endTimeStr = formatTime((i + 1) * 60);
+            label.textContent = `${startTimeStr} - ${endTimeStr}`;
             slot.appendChild(label);
 
-            scheduleTimeline.appendChild(slot);
+            scheduleTimelineEl.appendChild(slot);
         }
-        // Ensure timeline has the correct total height for pixel mapping
-        scheduleTimeline.style.height = `${numHours * hourHeight}px`;
+        scheduleTimelineEl.style.height = `${numHours * hourHeight}px`;
     }
 
      function getHourSlotFromY(clientY) {
-        const timelineRect = scheduleTimeline.getBoundingClientRect();
-        const y = clientY - timelineRect.top + scheduleTimeline.scrollTop;
-        const hourIndex = Math.floor(y / 60); // Assuming 60px per hour
-        return scheduleTimeline.querySelector(`.hour-slot[data-hour="${hourIndex}"]`);
+        const timelineRect = scheduleTimelineEl.getBoundingClientRect();
+        const y = clientY - timelineRect.top + scheduleTimelineEl.scrollTop;
+        const hourIndex = Math.floor(y / 60);
+        return scheduleTimelineEl.querySelector(`.hour-slot[data-hour="${hourIndex}"]`);
      }
 
     function renderSchedule() {
          // Clear only previously rendered tasks, not hour slots
-         const existingTasks = scheduleTimeline.querySelectorAll('.scheduled-task');
+         const existingTasks = scheduleTimelineEl.querySelectorAll('.scheduled-task');
          existingTasks.forEach(task => task.remove());
 
         scheduledTasks.forEach(task => {
@@ -178,36 +267,34 @@ document.addEventListener('DOMContentLoaded', () => {
             taskElement.classList.add('scheduled-task');
             taskElement.id = `scheduled-${task.id}`;
             taskElement.dataset.scheduledId = task.id;
-            taskElement.textContent = task.text;
 
-            // Calculate position and height (1 minute = 1 pixel)
+            // Calculate position and time
             const top = task.startTime;
             const height = task.duration;
+            const endTime = task.startTime + task.duration;
 
             taskElement.style.top = `${top}px`;
-            taskElement.style.height = `${height}px`;
-            taskElement.style.backgroundColor = getRandomColor(); // Optional: different colors
+            taskElement.style.height = `${Math.max(15, height)}px`; // Min height of 15px
 
-            // Add click listener to open edit modal
+            // Create inner content
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('task-text');
+            textSpan.textContent = task.text;
+            taskElement.appendChild(textSpan);
+
+            const timeSpan = document.createElement('span');
+            timeSpan.classList.add('task-time');
+            timeSpan.textContent = `${formatTime(task.startTime)} - ${formatTime(endTime)}`;
+            taskElement.appendChild(timeSpan);
+
+            // Add click listener
             taskElement.addEventListener('click', () => openEditModal(task.id));
 
-            scheduleTimeline.appendChild(taskElement);
+            scheduleTimelineEl.appendChild(taskElement);
         });
     }
 
     // --- Edit Modal Functionality ---
-    function formatMinutesToHHMM(totalMinutes) {
-        const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-        const minutes = (totalMinutes % 60).toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-    }
-
-    function formatHHMMToMinutes(hhmm) {
-        if (!hhmm) return 0;
-        const [hours, minutes] = hhmm.split(':').map(Number);
-        return (hours * 60) + minutes;
-    }
-
     function openEditModal(scheduledTaskId) {
         const task = scheduledTasks.find(t => t.id === scheduledTaskId);
         if (!task) return;
@@ -216,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalTaskName.textContent = task.text;
         modalStartTimeInput.value = formatMinutesToHHMM(task.startTime);
         modalDurationInput.value = task.duration;
-        modalDescriptionInput.value = task.description || ''; // Handle undefined description
+        modalDescriptionInput.value = task.description || '';
 
         editModal.style.display = 'block';
     }
@@ -228,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveEditedTask() {
         const scheduledTaskId = modalScheduledTaskIdInput.value;
         const taskIndex = scheduledTasks.findIndex(t => t.id === scheduledTaskId);
-        if (taskIndex === -1) return; // Task not found
+        if (taskIndex === -1) return;
 
         const newStartTime = formatHHMMToMinutes(modalStartTimeInput.value);
         const newDuration = parseInt(modalDurationInput.value, 10);
@@ -243,29 +330,137 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
          }
 
-
         // Update task in the array
         scheduledTasks[taskIndex] = {
-            ...scheduledTasks[taskIndex], // Keep existing id, taskId, text
+            ...scheduledTasks[taskIndex],
             startTime: newStartTime,
             duration: newDuration,
             description: newDescription
         };
 
-        renderSchedule(); // Re-render the schedule with updated info
+        renderSchedule();
+        saveStateToLocalStorage(); // Save after edit
         closeEditModal();
     }
 
      function deleteScheduledTask() {
         const scheduledTaskId = modalScheduledTaskIdInput.value;
-        scheduledTasks = scheduledTasks.filter(t => t.id !== scheduledTaskId);
-        renderSchedule();
-        closeEditModal();
+        if (confirm(`Are you sure you want to delete task "${modalTaskName.textContent}" from the schedule?`)) {
+            scheduledTasks = scheduledTasks.filter(t => t.id !== scheduledTaskId);
+            renderSchedule();
+            saveStateToLocalStorage(); // Save after delete
+            closeEditModal();
+        }
      }
 
+    // --- Theming ---
+    function applyTheme(themeName) {
+        document.body.dataset.theme = themeName;
+        localStorage.setItem(THEME_STORAGE_KEY, themeName); // Save preference
+        console.log(`Theme applied: ${themeName}`);
+    }
+
+    themeSelect.addEventListener('change', (e) => {
+        applyTheme(e.target.value);
+    });
+
+    // --- Import/Export ---
+    function exportSchedule() {
+        const dataToExport = {
+            version: 1, // Add versioning for future compatibility
+            tasks: tasks,
+            scheduledTasks: scheduledTasks,
+            nextTaskId: nextTaskId, // Save IDs to maintain consistency
+            nextScheduledId: nextScheduledId
+        };
+
+        try {
+            const jsonString = JSON.stringify(dataToExport, null, 2); // Pretty print JSON
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `timebox-schedule-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a); // Required for Firefox
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // Clean up
+             console.log("Schedule exported.");
+        } catch (error) {
+            console.error("Error exporting schedule:", error);
+            alert("Failed to export schedule.");
+        }
+    }
+
+    function importSchedule(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return; // No file selected
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const jsonString = e.target.result;
+                const importedData = JSON.parse(jsonString);
+
+                // Basic validation
+                if (!importedData || typeof importedData !== 'object' || !Array.isArray(importedData.tasks) || !Array.isArray(importedData.scheduledTasks)) {
+                     throw new Error("Invalid file format. Required fields 'tasks' and 'scheduledTasks' not found or are not arrays.");
+                }
+
+                 // Optional: Add more validation (check structure of task objects, etc.)
+
+                 if (confirm("Importing this file will overwrite your current tasks and schedule. Are you sure?")) {
+                     tasks = importedData.tasks;
+                     scheduledTasks = importedData.scheduledTasks;
+                     // Load IDs if present, otherwise calculate based on imported data
+                     const maxTaskId = tasks.reduce((max, t) => Math.max(max, parseInt(t.id.substring(1)) || 0), 0);
+                     const maxScheduledId = scheduledTasks.reduce((max, t) => Math.max(max, parseInt(t.id.substring(1)) || 0), 0);
+                     nextTaskId = Math.max(importedData.nextTaskId || 1, maxTaskId + 1);
+                     nextScheduledId = Math.max(importedData.nextScheduledId || 1, maxScheduledId + 1);
+
+                     saveStateToLocalStorage(); // Save the newly imported state
+                     renderTaskList();
+                     createHourSlots(); // Recreate slots (needed if timeline cleared)
+                     renderSchedule(); // Render the imported schedule
+                     alert("Schedule imported successfully!");
+                     console.log("Schedule imported.");
+                 }
+
+            } catch (error) {
+                console.error("Error importing schedule:", error);
+                alert(`Failed to import file: ${error.message}`);
+            } finally {
+                 // Reset file input value to allow importing the same file again
+                 importFileInput.value = null;
+            }
+        };
+
+        reader.onerror = () => {
+             console.error("Error reading file:", reader.error);
+             alert("Error reading the selected file.");
+             importFileInput.value = null;
+        };
+
+        reader.readAsText(file);
+    }
+
+    // --- Event Listeners ---
+    addTaskButton.addEventListener('click', addTask);
+    newTaskInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addTask();
+        }
+    });
     closeModalButton.addEventListener('click', closeEditModal);
     modalSaveButton.addEventListener('click', saveEditedTask);
     modalDeleteButton.addEventListener('click', deleteScheduledTask);
+    exportButton.addEventListener('click', exportSchedule);
+    importButton.addEventListener('click', () => importFileInput.click()); // Trigger hidden input
+    importFileInput.addEventListener('change', importSchedule);
 
     // Close modal if clicked outside the content
     window.addEventListener('click', (event) => {
@@ -276,23 +471,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     function initializeApp() {
-        createHourSlots(); // Generate the timeline structure
-        renderTaskList(); // Render initial tasks (if any were pre-defined)
-        renderSchedule(); // Render initial scheduled tasks (if any)
+        loadStateFromLocalStorage(); // Load saved data first
+        createHourSlots();         // Generate the timeline structure
+        renderTaskList();          // Render tasks from loaded state
+        renderSchedule();          // Render schedule from loaded state
+        console.log("App initialized.");
     }
-
-     // Helper for random colors (optional)
-     function getRandomColor() {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        // Generate softer colors - avoid pure black/white, lean towards blues/purples/greens
-        color += Math.floor(Math.random() * 8 + 4).toString(16); // R (4-B)
-        color += Math.floor(Math.random() * 8 + 4).toString(16); // G (4-B)
-        color += Math.floor(Math.random() * 8 + 8).toString(16); // B (8-F) - bias towards blue/purple
-        // Add alpha for transparency
-        // return color + 'CC'; // ~80% opacity
-        return color; // Solid color
-     }
 
     initializeApp();
 });
