@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainstorm & Timebox</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="task-list-container">
+            <h2>Today's Tasks</h2>
+            <div class="add-task">
+                <input type="text" id="new-task-input" placeholder="Add a new task...">
+                <button id="add-task-button">Add Task</button>
+            </div>
+            <ul id="task-list">
+                </ul>
+        </div>
+
+        <div class="schedule-container">
+            <h2>Schedule</h2>
+            <div id="schedule-timeline">
+                </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>Edit Scheduled Task</h3>
+            <p><strong>Task:</strong> <span id="modal-task-name"></span></p>
+            <div>
+                <label for="modal-start-time">Start Time (HH:MM):</label>
+                <input type="time" id="modal-start-time" required>
+            </div>
+            <div>
+                <label for="modal-duration">Duration (minutes):</label>
+                <input type="number" id="modal-duration" min="5" step="5" required>
+            </div>
+             <div>
+                <label for="modal-description">Description (optional):</label>
+                <textarea id="modal-description" rows="3"></textarea>
+            </div>
+            <button id="modal-save-button">Save Changes</button>
+            <button id="modal-delete-button">Delete Task</button>
+            <input type="hidden" id="modal-scheduled-task-id">
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
