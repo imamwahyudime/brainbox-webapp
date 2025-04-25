@@ -1,6 +1,6 @@
 # Brainstorm & Timebox Web Application
 
-[![Release Date](https://img.shields.io/badge/Release-April%2025,%202025-brightgreen.svg)](https://github.com/imamwahyudime/brainbox-webapp/releases/tag/v0.8)
+[![Release Date](https://img.shields.io/badge/Release-April%2020,%202025-brightgreen.svg)](https://github.com/imamwahyudime/brainbox-webapp/releases/tag/v0.8)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **Brainbox** is A time management web application to help you brainstorm tasks and schedule them into a visual timeline.
